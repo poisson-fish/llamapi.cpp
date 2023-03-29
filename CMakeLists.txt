@@ -64,6 +64,9 @@ option(LLAMA_OPENBLAS               "llama: use OpenBLAS"                       
 option(LLAMA_BUILD_TESTS            "llama: build tests"    ${LLAMA_STANDALONE})
 option(LLAMA_BUILD_EXAMPLES         "llama: build examples" ${LLAMA_STANDALONE})
 
+option(LLAMA_BUILD_SERVER               "llama: build a server with crow based api"     ON)
+option(LLAMA_PERF               "llama: build a server with performance optimizations"     ON)
+
 #
 # Compile flags
 #
@@ -219,6 +222,17 @@ else()
     message(STATUS "Unknown architecture")
 endif()
 
+if (LLAMA_PERF)
+	if (NOT MSVC)
+        set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -O3")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+	else()
+	  set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   /Ox")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Ox")
+	endif()
+     set(LLAMA_EXTRA_FLAGS ${LLAMA_EXTRA_FLAGS} -DGGML_PERF)
+endif()
+
 #
 # Build libraries
 #
@@ -227,7 +241,10 @@ add_library(ggml OBJECT
             ggml.c
             ggml.h)
 
-target_include_directories(ggml PUBLIC .)
+if(LLAMA_OPENBLAS)
+target_include_directories(ggml PUBLIC ${BLAS_INCLUDE_DIRS})
+endif()
+
 target_compile_features(ggml PUBLIC c_std_11) # don't bump
 target_link_libraries(ggml PRIVATE Threads::Threads ${LLAMA_EXTRA_LIBS})
 if (BUILD_SHARED_LIBS)
@@ -249,6 +266,22 @@ endif()
 #
 # programs, examples and tests
 #
+
+if (LLAMA_BUILD_SERVER)
+add_library(common STATIC
+            common.cpp
+            common.h)
+
+    add_executable(server
+    server.cpp
+    httplib.h)
+add_subdirectory(lib/jsoncpp)
+get_target_property(JSON_INC_PATH jsoncpp_lib INTERFACE_INCLUDE_DIRECTORIES)
+include_directories(${JSON_INC_PATH})
+target_link_libraries(common PRIVATE llama ggml ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(server PRIVATE common jsoncpp_lib llama ggml ${CMAKE_THREAD_LIBS_INIT})
+target_compile_features(server PRIVATE cxx_std_11)
+endif()
 
 if (LLAMA_BUILD_TESTS AND NOT CMAKE_JS_VERSION)
     enable_testing()
