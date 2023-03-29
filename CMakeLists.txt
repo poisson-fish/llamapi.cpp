@@ -127,8 +127,9 @@ if (LLAMA_ALL_WARNINGS)
             -Wall
             -Wextra
             -Wpedantic
-            -Wshadow
             -Wcast-qual
+            -Wdouble-promotion
+            -Wshadow
             -Wstrict-prototypes
             -Wpointer-arith
             -Wno-unused-function
@@ -138,6 +139,7 @@ if (LLAMA_ALL_WARNINGS)
             -Wextra
             -Wpedantic
             -Wcast-qual
+            -Wno-unused-function
         )
     else()
         # todo : msvc
