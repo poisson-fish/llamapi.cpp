@@ -15,7 +15,7 @@ Inference of [LLaMA](https://arxiv.org/abs/2302.13971) model in pure C/C++
 
 ## API Fork
 
-This fork exposes llama.cpp via [cpp-httplib](https://github.com/yhirose/cpp-httplib) in the laziest way possible.
+This fork exposes [llama.cpp](https://github.com/ggerganov/llama.cpp) via [cpp-httplib](https://github.com/yhirose/cpp-httplib) in the laziest way possible.
 At some point I may make it less dumb and flesh out the API slightly.
 
 Building should be no different than the llama.cpp process, except you need to make sure you've pulled down all the git submodules.
