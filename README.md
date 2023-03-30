@@ -25,8 +25,8 @@ To use the API:
 POST to :8080/generate
 ```
 {
-"user": "<username>",
-"prompt": "<prompt>"
+"user": "<base64'd username>",
+"prompt": "<base64'd prompt>"
 }
 ```
 
