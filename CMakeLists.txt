@@ -245,10 +245,7 @@ add_library(ggml OBJECT
             ggml.c
             ggml.h)
 
-if(LLAMA_OPENBLAS)
-target_include_directories(ggml PUBLIC ${BLAS_INCLUDE_DIRS})
-endif()
-
+target_include_directories(ggml PUBLIC .)
 target_compile_features(ggml PUBLIC c_std_11) # don't bump
 target_link_libraries(ggml PRIVATE Threads::Threads ${LLAMA_EXTRA_LIBS})
 if (BUILD_SHARED_LIBS)
@@ -289,7 +286,7 @@ target_compile_features(server PRIVATE cxx_std_11)
 endif()
 
 if (LLAMA_BUILD_TESTS AND NOT CMAKE_JS_VERSION)
-    enable_testing()
+    include(CTest)
     add_subdirectory(tests)
 endif ()
 
