@@ -12,6 +12,42 @@ Inference of [LLaMA](https://arxiv.org/abs/2302.13971) model in pure C/C++
 - [Roadmap (short-term)](https://github.com/ggerganov/llama.cpp/discussions/457)
 - Support for [GPT4All](https://github.com/ggerganov/llama.cpp#using-gpt4all)
 
+
+## API Fork
+
+This fork exposes [llama.cpp](https://github.com/ggerganov/llama.cpp) via [cpp-httplib](https://github.com/yhirose/cpp-httplib) in the laziest way possible.
+At some point I may make it less dumb and flesh out the API slightly.
+
+Building should be no different than the llama.cpp process, except you need to make sure you've pulled down all the git submodules.
+
+To use the API:
+
+POST to :8080/generate
+```
+{
+"user": "<base64'd username>",
+"prompt": "<base64'd prompt>"
+}
+```
+
+Both parameters are required, empty user is fine if it is not used in the substitution prompt.
+
+Start the server with the -S flag which specifies a prompt text file. 
+
+Anywhere inside the file, the text USER and PROMPT is replaced with the JSON parameters from the request and fed into the model.
+
+The model response is returned with this format:
+```
+{
+"result": "<result string>"
+}
+```
+Requests are queued via a shared_mutex on the loaded model. ```¯\_(ツ)_/¯```
+
+It's really lazy and basic but it's all I need for my personal research purposes for now.
+
+Feel free to submit PRs.
+
 ## Description
 
 The main goal is to run the model using 4-bit quantization on a MacBook
