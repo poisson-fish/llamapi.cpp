@@ -61,7 +61,19 @@ bool gpt_params_parse(int argc, char ** argv, gpt_params & params) {
             if (params.prompt.back() == '\n') {
                 params.prompt.pop_back();
             }
-        } else if (arg == "-n" || arg == "--n_predict") {
+        }
+        else if (arg == "-S" || arg == "--soft-prompt-file") {
+            if (++i >= argc) {
+                invalid_param = true;
+                break;
+            }
+            std::ifstream file(argv[i]);
+            std::copy(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), back_inserter(params.soft_prompt));
+           // if (params.soft_prompt.back() == '\n') {
+           //     params.soft_prompt.pop_back();
+           // }
+        }
+        else if (arg == "-n" || arg == "--n_predict") {
             if (++i >= argc) {
                 invalid_param = true;
                 break;

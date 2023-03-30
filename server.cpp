@@ -109,7 +109,10 @@ void win32_console_init(void) {
 #include <fstream>
 #include <regex>
 #include "httplib.h"
-#include "lib/jsoncpp/include/json/json.h"
+//#include "lib/jsoncpp/include/json/json.h"
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+#include "base64.h"
 #include <cstdio>
 #include <shared_mutex>
 
@@ -124,7 +127,7 @@ std::string queryModel(ModelData& data) {
 
    // tokenize the prompt
     auto embd_inp = ::llama_tokenize(data.ctx, data.params.prompt, true);
-
+    std::string result = "";
     const int n_ctx = llama_n_ctx(data.ctx);
 
     if ((int)embd_inp.size() > n_ctx - 4) {
@@ -259,7 +262,9 @@ std::string queryModel(ModelData& data) {
         // display text
         if (!input_noecho) {
             for (auto id : embd) {
-                printf("%s", llama_token_to_str(data.ctx, id));
+                const auto token = llama_token_to_str(data.ctx, id);
+                result += token;
+                printf("%s", token);
             }
             fflush(stdout);
         }
@@ -270,15 +275,17 @@ std::string queryModel(ModelData& data) {
                 is_interacting = true;
             }
             else {
+                return result;
                 fprintf(stderr, " [end of text]\n");
                 break;
             }
         }
 
         // In interactive mode, respect the maximum number of tokens and drop back to user input when reached.
-        if (data.params.interactive && n_remain <= 0 && data.params.n_predict != -1) {
+        if (n_remain <= 0 && data.params.n_predict != -1) {
             n_remain = data.params.n_predict;
-            is_interacting = true;
+            fprintf(stderr, " [end of text]\n");
+            return result;
         }
     }
 
@@ -289,13 +296,25 @@ std::string queryModel(ModelData& data) {
 
 int main(int argc, char ** argv) {
     gpt_params params;
-    params.model = "models/30B/alpaca-gptq-4bit-ggml.bin";
+    
+    params.temp = 0.6f;
+    params.top_p = 0.98f;
+    params.n_ctx = 220;
+    params.model = "models/30B/ggml-model-q4_0.bin";
+    params.n_threads = 18;
+    params.repeat_last_n = 64;
+    params.repeat_penalty = 1.15;
+    params.ignore_eos = false;
+    params.top_k = 40;
+    params.n_batch = 32;
+    params.n_predict = 75;
+    params.use_mlock = false;
 
     if (gpt_params_parse(argc, argv, params) == false) {
         return 1;
     }
-    params.n_batch = 32;
-    params.n_threads = 16;
+    
+
 
 #if defined (_WIN32)
     win32_console_init();
@@ -418,39 +437,32 @@ int main(int argc, char ** argv) {
         std::lock_guard<std::shared_mutex> guard(model_state_mutex);
 
         const auto request_body = req.body;
-        Json::Value root;
-        Json::CharReaderBuilder builder;
-        Json::CharReader* reader = builder.newCharReader();
+        json root = json::parse(request_body);
         std::string errors;
-        bool parsingSuccessful = reader->parse(request_body.c_str(), request_body.c_str() + request_body.size(), &root, &errors);
-        delete reader;
 
-        if (!parsingSuccessful)
-        {
-            //fprintf(stderr, "Json parsing failed.");
-            res.set_content("{error:\"JSON input malformed\"}", "application/json");
-            return;
-        }
-        else if (!(root.isMember("prompt") && root.isMember("user"))) {
+        if (!(root.contains("prompt") && root.contains("user"))) {
             //fprintf(stderr, "Json lacked the required fields user  and prompt.");
-            res.set_content("{error:\"JSON input malformed\"}", "application/json");
+            res.set_content("{\"error\":\"JSON input malformed\"}", "application/json");
             return;
         }
 
         //fprintf(stderr, std::format("Request: {}\n", root.asString()).c_str());
 
-        const auto promptInput = root["prompt"].asString();
-        const auto userInput = root["user"].asString();
-        fprintf(stderr, "prompt: %s\n", promptInput.c_str());
-        fprintf(stderr, "user: %s\n", userInput.c_str());
+        const auto promptInput = root["prompt"].get<std::string>();
+        const auto userInput = root["user"].get<std::string>();
+        const auto unBase64dPrompt = std::string(base64::decode(promptInput.c_str(),promptInput.length()));
+        const auto unBase64dUser = std::string(base64::decode(userInput.c_str(),promptInput.length()));
+        fprintf(stderr, "\nprompt: %s\n", unBase64dPrompt.c_str());
+        fprintf(stderr, "user: %s\n", unBase64dUser.c_str());
 
         model_state.params.prompt = std::regex_replace(
-            std::regex_replace(model_state.params.input_prefix, std::regex("PROMPT"), promptInput)
-            , std::regex("USER"), userInput);
+            std::regex_replace(model_state.params.soft_prompt, std::regex("PROMPT"), unBase64dPrompt)
+            , std::regex("USER"), unBase64dUser);
 
-        Json::Value result;
+        json result;
         const std::string queryResult = queryModel(model_state);
-        res.body = queryResult;
+        result["result"] = queryResult;
+        res.body = result.dump();
 
         });
 

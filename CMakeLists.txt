@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.12) # Don't bump this version for no reason
+set(CMAKE_CXX_STANDARD 20)
 project("llama.cpp" C CXX)
+cmake_policy (SET CMP0079 NEW)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -229,7 +231,7 @@ if (LLAMA_PERF)
         set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -O3")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 	else()
-	  set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   /Ox")
+	    set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   /Ox")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Ox")
 	endif()
      set(LLAMA_EXTRA_FLAGS ${LLAMA_EXTRA_FLAGS} -DGGML_PERF)
@@ -276,12 +278,13 @@ add_library(common STATIC
 
     add_executable(server
     server.cpp
-    httplib.h)
-add_subdirectory(lib/jsoncpp)
-get_target_property(JSON_INC_PATH jsoncpp_lib INTERFACE_INCLUDE_DIRECTORIES)
-include_directories(${JSON_INC_PATH})
+    httplib.h
+    base64.h)
+add_subdirectory(lib/njson)
+# get_target_property(JSON_INC_PATH jsoncpp_lib INTERFACE_INCLUDE_DIRECTORIES)
+# include_directories(${JSON_INC_PATH})
 target_link_libraries(common PRIVATE llama ggml ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(server PRIVATE common jsoncpp_lib llama ggml ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(server PRIVATE common nlohmann_json::nlohmann_json llama ggml ${CMAKE_THREAD_LIBS_INIT})
 target_compile_features(server PRIVATE cxx_std_11)
 endif()
 

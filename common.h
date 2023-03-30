@@ -31,6 +31,7 @@ struct gpt_params {
 
     std::string model  = "models/lamma-7B/ggml-model.bin"; // model path
     std::string prompt = "";
+    std::string soft_prompt = "";
     std::string input_prefix = ""; // string to prefix user inputs with
 
 
