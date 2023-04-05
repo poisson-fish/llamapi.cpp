@@ -272,7 +272,7 @@ endif()
 #
 
 if (LLAMA_BUILD_SERVER)
-add_library(common STATIC
+add_library(commonlib STATIC
             common.cpp
             common.h)
 
@@ -283,8 +283,8 @@ add_library(common STATIC
 add_subdirectory(lib/njson)
 # get_target_property(JSON_INC_PATH jsoncpp_lib INTERFACE_INCLUDE_DIRECTORIES)
 # include_directories(${JSON_INC_PATH})
-target_link_libraries(common PRIVATE llama ggml ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(server PRIVATE common nlohmann_json::nlohmann_json llama ggml ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(commonlib PRIVATE llama ggml ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(server PRIVATE commonlib nlohmann_json::nlohmann_json llama ggml ${CMAKE_THREAD_LIBS_INIT})
 target_compile_features(server PRIVATE cxx_std_11)
 endif()
 
