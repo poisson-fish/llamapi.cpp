@@ -75,6 +75,7 @@ def ggml_nbytes(shape, ftype):
     return x
 
 def parse_args():
+
     parser = argparse.ArgumentParser(description='Convert a LLaMA model checkpoint to a ggml compatible file')
     parser.add_argument('dir_model',  help='directory containing the model checkpoint')
     parser.add_argument('ftype',      help='file type (0: float32, 1: float16)', type=int, choices=[0, 1], default=1)
@@ -82,6 +83,7 @@ def parse_args():
     return parser.parse_args()
 
 def get_n_parts(dim):
+
     mappings = {4096: 1, 5120: 2, 6656: 4, 8192: 8}
     n_parts = mappings.get(dim)
     if n_parts is None:
@@ -92,21 +94,27 @@ def get_n_parts(dim):
     return n_parts
 
 def load_hparams_and_tokenizer(dir_model):
+
     # `dir_model` is something like `models/7B` or `models/7B/`.
     # "tokenizer.model" is expected under model's parent dir.
     # When `dir_model` is a symlink, f"{dir_model}/../tokenizer.model" would not be found.
     # Let's use the model's parent dir directly.
     model_parent_dir = os.path.dirname(os.path.normpath(dir_model))
+
     fname_hparams = f"{dir_model}/params.json"
     fname_tokenizer = f"{model_parent_dir}/tokenizer.model"
+
     with open(fname_hparams, "r") as f:
         hparams = json.load(f)
         print(hparams)
+
     tokenizer = SentencePieceProcessor(fname_tokenizer)
     hparams.update({"vocab_size": tokenizer.vocab_size()})
+
     return hparams, tokenizer
 
 def write_header(fout, hparams, ftype):
+
     keys = ["vocab_size", "dim", "multiple_of", "n_heads", "n_layers"]
     values = [
         0x67676a74,  # magic: ggjt in hex
@@ -118,9 +126,10 @@ def write_header(fout, hparams, ftype):
     fout.write(struct.pack("i" * len(values), *values))
 
 def write_tokens(fout, tokenizer):
+
     for i in range(tokenizer.vocab_size()):
         if tokenizer.is_unknown(i):
-            text = " \u2047 ".encode("utf-8")
+            text = " \u2047 ".encode()
         elif tokenizer.is_control(i):
             text = b""
         elif tokenizer.is_byte(i):
@@ -131,13 +140,14 @@ def write_tokens(fout, tokenizer):
             byte_value = int(piece[3:-1], 16)
             text = struct.pack("B", byte_value)
         else:
-            text = tokenizer.id_to_piece(i).replace("\u2581", " ").encode("utf-8")
+            text = tokenizer.id_to_piece(i).replace("\u2581", " ").encode()
         fout.write(struct.pack("i", len(text)))
         fout.write(text)
         fout.write(struct.pack("f", tokenizer.get_score(i)))
 
 def process_and_write_variables(fout, model, ftype, part_id, n_parts):
     for name, datao in model.items():
+
         if name.endswith("freqs"):
             continue
 
@@ -191,7 +201,7 @@ def process_and_write_variables(fout, model, ftype, part_id, n_parts):
         fullshape = list(partshape)
         if n_dims > 1:
             fullshape[split_dim] *= n_parts
-        sname = name.encode('utf-8')
+        sname = name.encode()
         fout.write(struct.pack("iii", n_dims, len(sname), ftype_cur))
         for dim in reversed(fullshape):
             fout.write(struct.pack("i", dim))
@@ -232,23 +242,32 @@ def process_and_write_variables(fout, model, ftype, part_id, n_parts):
         fout.seek(tensor_data_offset + ggml_nbytes(fullshape, ftype_cur))
 
 def main():
+
     args = parse_args()
     dir_model = args.dir_model
     ftype = args.ftype
     ftype_str = ["f32", "f16"]
+
     hparams, tokenizer = load_hparams_and_tokenizer(dir_model)
 
     print(args)
 
     # if only writing vocab to file
     if args.vocab_only:
+
         fname_model = f"{dir_model}/consolidated.00.pth"
         fname_out = f"{dir_model}/ggml-vocab.bin"
+
         print(f"Extracting only the vocab from '{fname_model}'\n")
+
+
         with open(fname_out, "wb") as fout:
             write_header(fout, hparams, ftype)
             write_tokens(fout, tokenizer)
+
+
         print(f"Done. Output file: {fname_out}\n")
+
         return
 
     n_parts = get_n_parts(hparams["dim"])

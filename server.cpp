@@ -275,8 +275,9 @@ std::string queryModel(ModelData& data) {
                 is_interacting = true;
             }
             else {
-                return result;
                 fprintf(stderr, " [end of text]\n");
+                llama_print_timings(data.ctx);
+                return result;
                 break;
             }
         }
@@ -285,6 +286,7 @@ std::string queryModel(ModelData& data) {
         if (n_remain <= 0 && data.params.n_predict != -1) {
             n_remain = data.params.n_predict;
             fprintf(stderr, " [end of text]\n");
+            llama_print_timings(data.ctx);
             return result;
         }
     }
