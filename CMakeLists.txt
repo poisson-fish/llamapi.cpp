@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.12) # Don't bump this version for no reason
-set(CMAKE_CXX_STANDARD 20)
 project("llama.cpp" C CXX)
 cmake_policy (SET CMP0079 NEW)
 
@@ -73,7 +72,7 @@ option(LLAMA_PERF               "llama: build a server with performance optimiza
 # Compile flags
 #
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED true)

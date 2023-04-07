@@ -232,9 +232,9 @@ std::string queryModel(ModelData& data) {
             }
 
             // replace end of text token with newline token when in interactive mode
-            if (id == llama_token_eos() && data.params.interactive && !data.params.instruct) {
-                id = llama_token_newline.front();
-            }
+            //if (id == llama_token_eos()) {
+            //    id = llama_token_newline.front();
+            //}
 
             // add it to the context
             embd.push_back(id);
@@ -268,18 +268,22 @@ std::string queryModel(ModelData& data) {
             }
             fflush(stdout);
         }
+        for (std::string & antiprompt : data.params.antiprompt) {
+                    if (result.find(antiprompt.c_str(), result.length() - antiprompt.length(), antiprompt.length()) != std::string::npos) {
+                        fprintf(stderr, " [end of text]\n");
+                        llama_print_timings(data.ctx);
+                        fflush(stdout);
+                        return result.substr(0, result.find(antiprompt.c_str()));
+                    }
+        }
+    
 
         // end of text token
         if (embd.back() == llama_token_eos()) {
-            if (data.params.instruct) {
-                is_interacting = true;
-            }
-            else {
-                fprintf(stderr, " [end of text]\n");
-                llama_print_timings(data.ctx);
-                return result;
-                break;
-            }
+            fprintf(stderr, " [end of text]\n");
+            llama_print_timings(data.ctx);
+            fflush(stdout);
+            return result;
         }
 
         // In interactive mode, respect the maximum number of tokens and drop back to user input when reached.
