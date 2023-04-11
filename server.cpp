@@ -446,7 +446,7 @@ int main(int argc, char ** argv) {
         json root = json::parse(request_body);
         std::string errors;
 
-        if (!(root.contains("prompt") && root.contains("user"))) {
+        if (!(root.contains("prompt") && root.contains("user") && root.contains("contextData"))) {
             //fprintf(stderr, "Json lacked the required fields user  and prompt.");
             res.set_content("{\"error\":\"JSON input malformed\"}", "application/json");
             return;
@@ -457,13 +457,31 @@ int main(int argc, char ** argv) {
         const auto promptInput = root["prompt"].get<std::string>();
         const auto userInput = root["user"].get<std::string>();
         const auto unBase64dPrompt = std::string(base64::decode(promptInput.c_str(),promptInput.length()));
-        const auto unBase64dUser = std::string(base64::decode(userInput.c_str(),promptInput.length()));
-        fprintf(stderr, "\nprompt: %s\n", unBase64dPrompt.c_str());
-        fprintf(stderr, "user: %s\n", unBase64dUser.c_str());
+        const auto unBase64dUser = std::string(base64::decode(userInput.c_str(), userInput.length()));
 
-        model_state.params.prompt = std::regex_replace(
-            std::regex_replace(model_state.params.soft_prompt, std::regex("PROMPT"), unBase64dPrompt)
-            , std::regex("USER"), unBase64dUser);
+        const auto ctxData = root["contextData"];
+        const auto chatHistory = ctxData["ChatHistory"].get<std::string>();
+        const auto unBase64dChatHistory = std::string(base64::decode(chatHistory.c_str(),chatHistory.length()));
+        const auto dateStr = ctxData["DateString"].get<std::string>();
+        const auto timeStr = ctxData["TimeString"].get<std::string>();
+        const auto timeZoneStr = ctxData["TimeZoneString"].get<std::string>();
+
+        fprintf(stderr, "\nprompt: %s", unBase64dPrompt.c_str());
+        fprintf(stderr, "\nuser: %s", unBase64dUser.c_str());
+        fprintf(stderr, "\ndate: %s", dateStr.c_str());
+        fprintf(stderr, "\ntime: %s", timeStr.c_str());
+        fprintf(stderr, "\ntimezone: %s", timeZoneStr.c_str());
+        fprintf(stderr, "\nhistorystr: \n%s\n", unBase64dChatHistory.c_str());
+
+        
+        std::string soft_prompt = std::regex_replace(model_state.params.soft_prompt, std::regex("PROMPT"), unBase64dPrompt);
+        soft_prompt = std::regex_replace(soft_prompt, std::regex("USER"), unBase64dUser);
+        soft_prompt = std::regex_replace(soft_prompt, std::regex("HISTORY"), unBase64dChatHistory);
+        soft_prompt = std::regex_replace(soft_prompt, std::regex("DATE"), dateStr);
+        soft_prompt = std::regex_replace(soft_prompt, std::regex("TIME"), timeStr);
+        soft_prompt = std::regex_replace(soft_prompt, std::regex("TIMEZONE"), timeZoneStr);
+
+        model_state.params.prompt = soft_prompt;
 
         json result;
         const std::string queryResult = queryModel(model_state);
