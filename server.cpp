@@ -27,49 +27,10 @@ extern "C" __declspec(dllimport) int __stdcall SetConsoleCP(unsigned int wCodePa
 extern "C" __declspec(dllimport) int __stdcall SetConsoleOutputCP(unsigned int wCodePageID);
 #endif
 
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
-#define ANSI_BOLD          "\x1b[1m"
-
-/* Keep track of current color of output, and emit ANSI code if it changes. */
-enum console_state {
-    CONSOLE_STATE_DEFAULT=0,
-    CONSOLE_STATE_PROMPT,
-    CONSOLE_STATE_USER_INPUT
-};
-
-static console_state con_st = CONSOLE_STATE_DEFAULT;
-static bool con_use_color = false;
-
-void set_console_state(console_state new_st) {
-    if (!con_use_color) return;
-    // only emit color code if state changed
-    if (new_st != con_st) {
-        con_st = new_st;
-        switch(con_st) {
-        case CONSOLE_STATE_DEFAULT:
-            printf(ANSI_COLOR_RESET);
-            return;
-        case CONSOLE_STATE_PROMPT:
-            printf(ANSI_COLOR_YELLOW);
-            return;
-        case CONSOLE_STATE_USER_INPUT:
-            printf(ANSI_BOLD ANSI_COLOR_GREEN);
-            return;
-        }
-    }
-}
-
 static bool is_interacting = false;
 
 #if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__)) || defined (_WIN32)
 void sigint_handler(int signo) {
-    set_console_state(CONSOLE_STATE_DEFAULT);
     printf("\n"); // this also force flush stdout.
     if (signo == SIGINT) {
         if (!is_interacting) {
@@ -474,12 +435,12 @@ int main(int argc, char ** argv) {
         fprintf(stderr, "\nhistorystr: \n%s\n", unBase64dChatHistory.c_str());
 
         
-        std::string soft_prompt = std::regex_replace(model_state.params.soft_prompt, std::regex("PROMPT"), unBase64dPrompt);
-        soft_prompt = std::regex_replace(soft_prompt, std::regex("USER"), unBase64dUser);
-        soft_prompt = std::regex_replace(soft_prompt, std::regex("HISTORY"), unBase64dChatHistory);
-        soft_prompt = std::regex_replace(soft_prompt, std::regex("DATE"), dateStr);
-        soft_prompt = std::regex_replace(soft_prompt, std::regex("TIME"), timeStr);
-        soft_prompt = std::regex_replace(soft_prompt, std::regex("TIMEZONE"), timeZoneStr);
+        std::string soft_prompt = std::regex_replace(model_state.params.soft_prompt, std::regex("<PROMPT>"), unBase64dPrompt);
+        soft_prompt = std::regex_replace(soft_prompt, std::regex("<USER>"), unBase64dUser);
+        soft_prompt = std::regex_replace(soft_prompt, std::regex("<HISTORY>"), unBase64dChatHistory);
+        soft_prompt = std::regex_replace(soft_prompt, std::regex("<DATE>"), dateStr);
+        soft_prompt = std::regex_replace(soft_prompt, std::regex("<TIME>"), timeStr);
+        soft_prompt = std::regex_replace(soft_prompt, std::regex("<TIMEZONE>"), timeZoneStr);
 
         model_state.params.prompt = soft_prompt;
 
@@ -499,8 +460,6 @@ int main(int argc, char ** argv) {
 
     llama_print_timings(ctx);
     llama_free(ctx);
-
-    set_console_state(CONSOLE_STATE_DEFAULT);
 
     return 0;
 }
