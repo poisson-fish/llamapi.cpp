@@ -209,22 +209,23 @@ bool gpt_params_parse(int argc, char ** argv, gpt_params & params) {
                 invalid_param = true;
                 break;
             }
-            params.model = args[i];
-        } else if (arg == "-S" || arg == "--soft-prompt") {
-            if (++i >= args_c) {
+<<<<<<< HEAD
+            params.model = argv[i];
+        } else if (arg == "-S" || arg == "--soft_prompt") {
+           if (++i >= argc) {
                 invalid_param = true;
                 break;
             }
-            std::ifstream file(args[i]);
+            std::ifstream file(argv[i]);
             if (!file) {
-                fprintf(stderr, "error: failed to open file '%s'\n", args[i].c_str());
+                fprintf(stderr, "error: failed to open file '%s'\n", argv[i]);
                 invalid_param = true;
                 break;
             }
             std::copy(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), back_inserter(params.soft_prompt));
-            //if (params.prompt.back() == '\n') {
-            //    params.prompt.pop_back();
-            //}
+=======
+            params.model = args[i];
+>>>>>>> c56b7152690ca25cfd66b20210b3629e6c1e739b
         } else if (arg == "-i" || arg == "--interactive") {
             params.interactive = true;
         } else if (arg == "--embedding") {

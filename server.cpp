@@ -443,6 +443,7 @@ int main(int argc, char ** argv) {
         soft_prompt = std::regex_replace(soft_prompt, std::regex("<TIMEZONE>"), timeZoneStr);
 
         model_state.params.prompt = soft_prompt;
+        fprintf(stderr, "\nprompt: \n%s\n", soft_prompt.c_str());
 
         json result;
         const std::string queryResult = queryModel(model_state);
