@@ -67,6 +67,7 @@ endif()
 # 3rd party libs
 option(LLAMA_ACCELERATE             "llama: enable Accelerate framework"                    ON)
 option(LLAMA_OPENBLAS               "llama: use OpenBLAS"                                   OFF)
+option(LLAMA_CUBLAS                 "llama: use cuBLAS"                                     OFF)
 
 option(LLAMA_BUILD_TESTS            "llama: build tests"    ${LLAMA_STANDALONE})
 option(LLAMA_BUILD_EXAMPLES         "llama: build examples" ${LLAMA_STANDALONE})
@@ -134,6 +135,26 @@ if (LLAMA_OPENBLAS)
     )
     find_path(OPENBLAS_INC NAMES cblas.h PATHS ${OPENBLAS_INCLUDE_SEARCH_PATHS})
     add_compile_options(-I${OPENBLAS_INC})
+endif()
+
+if (LLAMA_CUBLAS)
+    cmake_minimum_required(VERSION 3.17)
+
+    find_package(CUDAToolkit)
+    if (CUDAToolkit_FOUND)
+        message(STATUS "cuBLAS found")
+
+        add_compile_definitions(GGML_USE_CUBLAS)
+
+        if (LLAMA_STATIC)
+            set(LLAMA_EXTRA_LIBS ${LLAMA_EXTRA_LIBS} CUDA::cudart_static CUDA::cublas_static CUDA::cublasLt_static)
+        else()
+            set(LLAMA_EXTRA_LIBS ${LLAMA_EXTRA_LIBS} CUDA::cudart CUDA::cublas CUDA::cublasLt)
+        endif()
+
+    else()
+        message(WARNING "cuBLAS not found")
+    endif()
 endif()
 
 if (LLAMA_ALL_WARNINGS)
@@ -324,4 +345,5 @@ endif ()
 
 if (LLAMA_BUILD_EXAMPLES)
     add_subdirectory(examples)
+    add_subdirectory(pocs)
 endif()

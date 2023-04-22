@@ -97,6 +97,10 @@ ifdef LLAMA_OPENBLAS
 	CFLAGS  += -DGGML_USE_OPENBLAS -I/usr/local/include/openblas
 	LDFLAGS += -lopenblas
 endif
+ifdef LLAMA_CUBLAS
+	CFLAGS  += -DGGML_USE_CUBLAS -I/usr/local/cuda/include
+	LDFLAGS += -lcublas_static -lculibos -lcudart_static -lcublasLt_static -lpthread -ldl -L/usr/local/cuda/lib64
+endif
 ifdef LLAMA_GPROF
 	CFLAGS   += -pg
 	CXXFLAGS += -pg
@@ -133,7 +137,7 @@ $(info I CC:       $(CCV))
 $(info I CXX:      $(CXXV))
 $(info )
 
-default: main quantize quantize-stats perplexity embedding
+default: main quantize quantize-stats perplexity embedding vdot
 
 #
 # Build library
@@ -167,6 +171,9 @@ perplexity: examples/perplexity/perplexity.cpp ggml.o llama.o common.o
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 embedding: examples/embedding/embedding.cpp ggml.o llama.o common.o
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+
+vdot: pocs/vdot/vdot.cpp ggml.o
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 libllama.so: llama.o ggml.o

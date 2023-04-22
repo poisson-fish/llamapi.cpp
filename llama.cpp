@@ -478,6 +478,7 @@ struct llama_file_loader {
                 case GGML_TYPE_F16:
                 case GGML_TYPE_Q4_0:
                 case GGML_TYPE_Q4_1:
+                case GGML_TYPE_Q4_2:
                     break;
                 default: {
                     throw format("unrecognized tensor type %u\n", shard.type);
@@ -550,6 +551,7 @@ struct llama_file_saver {
             case GGML_TYPE_F16:
             case GGML_TYPE_Q4_0:
             case GGML_TYPE_Q4_1:
+            case GGML_TYPE_Q4_2:
                 break;
             default: LLAMA_ASSERT(false);
         }
@@ -838,6 +840,7 @@ static const char *llama_ftype_name(enum llama_ftype ftype) {
         case LLAMA_FTYPE_MOSTLY_Q4_1: return "mostly Q4_1";
         case LLAMA_FTYPE_MOSTLY_Q4_1_SOME_F16:
                                       return "mostly Q4_1, some F16";
+        case LLAMA_FTYPE_MOSTLY_Q4_2: return "mostly Q4_2";
         default:                      return "unknown, may not work";
     }
 }
@@ -1066,7 +1069,7 @@ static bool llama_eval_internal(
     // for big prompts, if BLAS is enabled, it is better to use only one thread
     // otherwise, the threads are spin-lock waiting for the BLAS calls and are degrading the performance
     ggml_cgraph gf = {};
-    gf.n_threads = N >= 32 && ggml_cpu_has_blas() ? 1 : n_threads;
+    gf.n_threads = N >= 32 && ggml_cpu_has_blas() && !ggml_cpu_has_cublas() ? 1 : n_threads;
 
     struct ggml_tensor * embd = ggml_new_tensor_1d(ctx0, GGML_TYPE_I32, N);
     memcpy(embd->data, tokens, N*ggml_element_size(embd));
@@ -1571,6 +1574,7 @@ static void llama_model_quantize_internal(const std::string & fname_inp, const s
     switch (ftype) {
         case LLAMA_FTYPE_MOSTLY_Q4_0: quantized_type = GGML_TYPE_Q4_0; break;
         case LLAMA_FTYPE_MOSTLY_Q4_1: quantized_type = GGML_TYPE_Q4_1; break;
+        case LLAMA_FTYPE_MOSTLY_Q4_2: quantized_type = GGML_TYPE_Q4_2; break;
         default: throw format("invalid output file type %d\n", ftype);
     };
 
@@ -1643,6 +1647,10 @@ static void llama_model_quantize_internal(const std::string & fname_inp, const s
                 case GGML_TYPE_Q4_1:
                     {
                         new_size = ggml_quantize_q4_1(f32_data, new_data, nelements, (int) tensor.ne.at(0), hist_cur.data());
+                    } break;
+                case GGML_TYPE_Q4_2:
+                    {
+                        new_size = ggml_quantize_q4_2(f32_data, new_data, nelements, (int) tensor.ne.at(0), hist_cur.data());
                     } break;
                 default:
                     LLAMA_ASSERT(false);
@@ -1955,7 +1963,7 @@ int llama_apply_lora_from_file_internal(struct llama_context * ctx, const char *
                 base_t = dest_t;
             }
 
-            if (base_t->type == GGML_TYPE_Q4_0 || base_t->type == GGML_TYPE_Q4_1) {
+            if (base_t->type == GGML_TYPE_Q4_0 || base_t->type == GGML_TYPE_Q4_1 || base_t->type == GGML_TYPE_Q4_2) {
                 if (!warned) {
                     fprintf(stderr, "%s: warning: using a lora adapter with a quantized model may result in poor quality, "
                                     "use a f16 or f32 base model with --lora-base\n", __func__);
