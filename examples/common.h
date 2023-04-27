@@ -20,7 +20,7 @@ struct gpt_params {
     int32_t repeat_last_n = 64;   // last n tokens to penalize
     int32_t n_parts       = -1;   // amount of model parts (-1 = determine from model dimensions)
     int32_t n_ctx         = 512;  // context size
-    int32_t n_batch       = 8;    // batch size for prompt processing
+    int32_t n_batch       = 512;  // batch size for prompt processing (must be >=32 to use BLAS)
     int32_t n_keep        = 0;    // number of tokens to keep from initial prompt
 
     // sampling parameters
@@ -50,7 +50,7 @@ struct gpt_params {
     bool interactive       = false; // interactive mode
 
     bool embedding         = false; // get only sentence embedding
-    bool interactive_start = false; // wait for user input immediately
+    bool interactive_first = false; // wait for user input immediately
 
     bool instruct          = false; // instruction mode (used for Alpaca models)
     bool ignore_eos        = false; // do not stop generating after eos
